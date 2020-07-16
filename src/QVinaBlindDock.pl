@@ -44,7 +44,7 @@ my $var = 5;#scale factor for calculating docking box
 my @lig_name=split /[\.\/]/, $ligand;
 my @pro_name=split /[\.\/]/, $protein;
 my $mol_name=$lig_name[-2]."-".$pro_name[-2];
-print STDERR $mol_name."\n";die;
+#print STDERR $mol_name."\n";die;
 
 
 my $dock_file=$mol_name;
@@ -275,7 +275,10 @@ close RUN;
 		#system "echo $num  $_cx  $_cy  $_cz  $_sx  $_sy  $_sz >> $outf\/$config ";
 		$conf{$num}="$num  $array[7]  $_cx  $_cy  $_cz  $_sx  $_sy  $_sz  ";
 		system "echo Calculate $num --LocalDocking >> $outf\/$logfile ";
-		system "$progPath/qvina2.1 --receptor $outf\/receptor.pdbqt --ligand $outf\/ligand.pdbqt --center_x $_cx --center_y $_cy --center_z $_cz --size_x $_sx --size_y $_sy --size_z $_sz --num_modes $nm --exhaustiveness $ex --out $outf\/$out_ligand >> $outf\/$logfile";
+		my $cmd = "$progPath/qvina2.1 --receptor $outf/receptor.pdbqt --ligand $outf/ligand.pdbqt --center_x $_cx --center_y $_cy --center_z $_cz --size_x $_sx --size_y $_sy --size_z $_sz --num_modes $nm --exhaustiveness $ex --out $outf/$out_ligand >> $outf/$logfile";
+		print STDERR $cmd."\n";
+		`$cmd`;
+		#system "$progPath/qvina2.1 --receptor $outf\/receptor.pdbqt --ligand $outf\/ligand.pdbqt --center_x $_cx --center_y $_cy --center_z $_cz --size_x $_sx --size_y $_sy --size_z $_sz --num_modes $nm --exhaustiveness $ex --out $outf\/$out_ligand >> $outf\/$logfile";
 		
 		my $lig_outfilepath=$outf."/".$out_ligand;
 		if(-e $lig_outfilepath)
@@ -303,7 +306,7 @@ close RUN;
 	{
 		my $out_ligand = $_;
 		$out_ligand =~ s/\.pdbqt/\.mol2/g;
-		system "babel -ipdbqt $_ -omol2 $out_ligand";
+		system "obabel -i pdbqt $_ -o mol2 $out_ligand";
 
 	}
 	system "rm $outf\/*.pdbqt";
@@ -312,6 +315,7 @@ close RUN;
 ###################################################################
 #get the vina score of the first pose
 
+my @data_log;
 my @buff;
 my $num=0;
 open FILE, "<$outf\/$logfile" or die "Error in opening logfile\n";
@@ -327,7 +331,7 @@ while(<FILE>)
 	{     		
 		my @temp=split(/\s+/, $_);
 		push @buff, $temp[2]; 
-		push @data, [@buff];  
+		push @data_log, [@buff];  
 		$num++;             
 	}
 		  
@@ -335,7 +339,7 @@ while(<FILE>)
 
 for(my $i=0; $i<$num; $i++)
 {
-	$conf{$i+1}.=$data[$i][1];
+	$conf{$i+1}.=$data_log[$i][1];
 	system "echo $conf{$i+1}>> $outf\/$config";
 }
 
@@ -348,9 +352,9 @@ for(my $i=0; $i<=$#mol2; $i++)
 	my @tmp = split /\.|\_/,$mol2[$i];
 	for(my $m=0; $m<$num; $m++)
 	{
-		if($tmp[-2] == $data[$m][0])
+		if($tmp[-2] == $data_log[$m][0])
 		{
-			$out_ligand_score =~ s/\.mol2/\.$data[$m][1]\.mol2/g;
+			$out_ligand_score =~ s/\.mol2/\.$data_log[$m][1]\.mol2/g;
 			rename $mol2[$i], $out_ligand_score;
 		}
 		
