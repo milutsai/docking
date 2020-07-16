@@ -1,13 +1,15 @@
 #!/usr/bin/perl   
 use strict;
+use warnings;
+use File::Basename;
+use Cwd 'abs_path';
 
+my $program = abs_path($0);
 if($#ARGV!=3)
-{
-      print "***************************************************************\n";
-      print "* Error in input data!                                        *\n";
-      print "* ./AutoDock.pl [Receptor] [Ligand] [PocketNum] [UserDir]     *\n";
-      print "* Example: ./AutoBlindDock.pl receptor.pdb ligand.mol2 5 test *\n";
-      print "***************************************************************\n";
+{ 
+      print "* Error in input data!\n";
+      print "* perl $program [Receptor] [Ligand] [PocketNum] [UserDir]\n";
+      print "* Example: ./QVinaBlindDock.pl receptor.pdb ligand.mol2 5 DirName\n";
       exit 0;
 }
 
@@ -16,6 +18,20 @@ my $ligand=$ARGV[1];
 my $PocketNum=$ARGV[2];
 my $userDirName=$ARGV[3];
 
+if(!-e $protein){
+	print STDERR $protein." does not exist\n";die;
+}
+if(!-e $ligand){
+	print STDERR $ligand." does not exist\n";die;
+}
+my $src_dir = dirname($program);
+my $userDirPath = $src_dir."/../docking_results/".$userDirName;
+if(-d $userDirPath){
+	print STDERR $userDirPath." exist\n";
+}else{
+	print STDERR $userDirPath." does not exist\n";
+	`mkdir $userDirPath`;
+}
 my $sec; my $min; my $hour;
 my $day; my $mon; my $year;
 my $wday; my $yday; my $isdst;
@@ -27,52 +43,30 @@ my $var = 5;#scale factor for calculating docking box
 
 my @lig_name=split /[\.\/]/, $ligand;
 my @pro_name=split /[\.\/]/, $protein;
-my $mol_name=@lig_name[-2]."-".@pro_name[-2];
-my $userDirPath=".\/dock_file\/$userDirName";
-print STDERR $userDirPath."\n";
-`mkdir $userDirPath`;
+my $mol_name=$lig_name[-2]."-".$pro_name[-2];
+print STDERR $mol_name."\n";die;
 
-my $dock_time=$year.($mon<10?"0$mon":$mon).($day<10?"0$day":$day).($hour<10?"0$hour":$hour).($min<10?"0$min":$min).($sec<10?"0$sec":$sec);
-my $dock_file=$mol_name."-".$year.($mon<10?"0$mon":$mon).($day<10?"0$day":$day).($hour<10?"0$hour":$hour).($min<10?"0$min":$min).($sec<10?"0$sec":$sec);
-my $outf="$userDirPath\/$mol_name"."-".$year.($mon<10?"0$mon":$mon).($day<10?"0$day":$day).($hour<10?"0$hour":$hour).($min<10?"0$min":$min).($sec<10?"0$sec":$sec);
+
+my $dock_file=$mol_name;
+my $outf=$userDirPath."/".$mol_name;
 my $logfile=$dock_file."_log.txt";
 my $errfile=$dock_file."_err.txt";
 my $config="config.txt";
 my %conf;
 my $progPath=".";
 
-	`mkdir "$outf"`;
-	system ("touch $outf\/$errfile");
-    system ("touch $userDirPath\/status.txt");
-    open (f, ">>$userDirPath\/status.txt");
-    print f "$year-$mon-$day $hour:$min:$sec\n";
-    close f;
-    
-    system ("touch $userDirPath\/$dock_time\_run.txt");
-    open (r, ">>$userDirPath\/$dock_time\_run.txt");
-    print r "$dock_file  $PocketNum  ";
-    close r;
-=pod    
-    #Statistics "run.txt" file number, up to keep the latest three
-	my @runs=glob("$userDirPath\/*_run.txt");
-	if(@runs > 3)
-	{
-		my @times;
-		foreach(@runs)
-		{
-			my @tmp=split /\/|\:|\_/,$_;
-			push(@times, $tmp[-2]);
-			
-		}
-		sort @times;
-		for(my $i=0; $i<=($#times-3); $i++)
-		{
-			my $del=$times[$i]."_run.txt";
-			system ("rm $userDirPath\/$del");
-		}
-		
-	}
-=cut
+`mkdir "$outf"`;
+system ("touch $outf\/$errfile");
+system ("touch $userDirPath\/status.txt");
+open STAT,">",$userDirPath."/status.txt";
+print STAT "$year-$mon-$day $hour:$min:$sec\n";
+close STAT;
+
+open RUN,">",$userDirPath."/run.txt";
+print RUN $dock_file."\t".$PocketNum."\n";
+close RUN;
+
+
     
     my $pro_ori = $protein;
     $pro_ori =~ s/\.pdb//g;
@@ -96,9 +90,9 @@ my $progPath=".";
 		exit;
 	}
 	
-	if(@lig_name[-1] ne "pdbqt")
+	if($lig_name[-1] ne "pdbqt")
 	{
-		$cmd = "obabel -i @lig_name[-1] $ligand -o pdbqt -O $ligand.pdbqt";
+		$cmd = "obabel -i ".$lig_name[-1]." ".$ligand." -o pdbqt -O ".$ligand.".pdbqt";
 		print STDERR $cmd."\n";
 		`$cmd`;
 		#system "babel -i@lig_name[-1] $ligand -omol2 $ligand.mol2 -p 7";#ligand format transfer --error info
@@ -317,7 +311,7 @@ my $progPath=".";
 	
 ###################################################################
 #get the vina score of the first pose
-my @data;
+
 my @buff;
 my $num=0;
 open FILE, "<$outf\/$logfile" or die "Error in opening logfile\n";
