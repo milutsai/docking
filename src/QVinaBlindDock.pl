@@ -48,10 +48,11 @@ my $mol_name=$lig_name[-2]."-".$pro_name[-2];
 
 
 my $dock_file=$mol_name;
-my $outf=$userDirPath."/".$mol_name;
+#my $outf=$userDirPath."/".$mol_name;
+my $outf=$userDirPath;
 my $logfile=$dock_file."_log.txt";
 my $errfile=$dock_file."_err.txt";
-my $config="config.txt";
+my $config="docking_results.txt";
 my %conf;
 my $progPath=".";
 
@@ -297,6 +298,7 @@ close RUN;
 	
 #######################################################################
 #process the output files
+=pod
 	system ("rm $outf\/receptor.pdbqt");
 	system ("rm $outf\/ligand.pdbqt");
 	system ("rm $outf\/conf.txt");
@@ -311,7 +313,7 @@ close RUN;
 	}
 	system "rm $outf\/*.pdbqt";
 	system "rm $outf\/grid.pdb";
-	
+=cut	
 ###################################################################
 #get the vina score of the first pose
 
@@ -343,6 +345,7 @@ for(my $i=0; $i<$num; $i++)
 	system "echo $conf{$i+1}>> $outf\/$config";
 }
 
+=pod
 my @mol2 =  @pdbqt;
 
 for(my $i=0; $i<=$#mol2; $i++)
